@@ -39,22 +39,25 @@ async def detect_plate(data: ImageInput):
         results = model(frame)[0]
 
         plate_texts = []
-        for box in results.boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-            cropped = frame[y1:y2, x1:x2]
 
-            # OCR
-            ocr_result = reader.readtext(cropped)
-            text = " ".join([i[1] for i in ocr_result])
-            if text:
-                plate_texts.append(text)
+        # ✅ Skip everything if no detections
+        if results.boxes is not None and len(results.boxes) > 0:
+            for box in results.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                cropped = frame[y1:y2, x1:x2]
 
-            # Draw box and label
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.6, (0, 255, 0), 2)
+                # OCR
+                ocr_result = reader.readtext(cropped)
+                text = " ".join([i[1] for i in ocr_result])
+                if text:
+                    plate_texts.append(text)
 
-        # Encode final image as base64
+                # Draw box and label
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, text, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6, (0, 255, 0), 2)
+
+        # ✅ Encode final image regardless of detection
         _, buffer = cv2.imencode(".jpg", frame)
         base64_img = base64.b64encode(buffer).decode("utf-8")
         base64_img = f"data:image/jpeg;base64,{base64_img}"
